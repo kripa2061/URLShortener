@@ -5,18 +5,23 @@ const { connectMongoDB } = require("./Connection");
 const Url = require("./Model/Url")
 const urlRoutes = require("./Routes/Url");
 const staticRoutes = require("./Routes/StaticRouter")
-
+const  {restrictToLoggedinUserOnly,checkAuth}=require("./middleware/auth")
+const UserRoutes=require("./Routes/User")
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGO_URL;
 const app = express();
 
+
 app.use(express.json());
 app.use(express.urlencoded({extended:false}));
+const cookieParser=require('cookie-parser');
 
 app.set("view engine", "ejs");
 app.set("views", path.resolve("./views"))
-
-app.get("/test", async (req, res) => {
+app.get("/", (req, res) => {
+    res.redirect("/login");
+});
+app.get("/url", async (req, res) => {
   try {
     const allUrls = await Url.find({});
     const urlMap = {};
@@ -41,10 +46,11 @@ app.get("/test", async (req, res) => {
   }
 });
 
+app.use(cookieParser());
 
-app.use("/url", urlRoutes);
-app.use("/", staticRoutes);
-
+app.use("/url", restrictToLoggedinUserOnly ,urlRoutes);
+app.use("/",checkAuth, staticRoutes);
+app.use("/user",UserRoutes);
 app.get("/:shortId", async (req, res) => {
   try {
     const shortID = req.params.shortId;
